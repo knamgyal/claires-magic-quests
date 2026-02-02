@@ -1,0 +1,2038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Claire's Chore Quest - A gamified task manager for kids" />
+  <title>Claire's Chore Quest</title>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Comfortaa:wght@400;700&family=Kalam:wght@400;700&family=Nunito:wght@400;700;900&family=Comic+Neue:wght@400;700&family=Bubblegum+Sans&family=Baloo+2:wght@400;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .animate-fadeIn { animation: fadeIn 0.3s ease-in-out; }
+    .animate-slideDown { animation: slideDown 0.3s ease-out; }
+
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+      gap: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .emoji-button {
+      font-size: 2rem;
+      padding: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(255, 255, 255, 0.3);
+    }
+    .emoji-button:hover {
+      transform: scale(1.2);
+      background: rgba(255, 255, 255, 0.6);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useReducer, useRef, createContext, useContext } = React;
+
+    // -----------------------------
+    // Icons (template-style set)
+    // -----------------------------
+    const Icons = {
+      Star: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
+      Sparkles: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3l-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /></svg>,
+      Home: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>,
+      Settings: (props) => (
+        <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      ),
+      Trophy: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>,
+      Gift: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/></svg>,
+      Play: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="6 3 20 12 6 21 6 3" /></svg>,
+      Pause: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>,
+      RotateCcw: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+      Check: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5" /></svg>,
+      Plus: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+      X: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="M6 6 18 18"/></svg>,
+      Menu: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
+      Search: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21-4.3-4.3"/></svg>,
+      Clock: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+      Target: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+      Award: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 16.992 21.416a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/></svg>,
+      Zap: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>,
+      Crown: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/></svg>,
+      ChevronRight: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18 15 12 9 6"/></svg>,
+    };
+
+    // -----------------------------
+    // Themes (template)
+    // -----------------------------
+    const THEMES = {
+      space: { id: 'space', name: 'Space Adventure', fontFamily: "'Orbitron', sans-serif", colors: { primary: 'from-indigo-600 via-purple-600 to-pink-600', bg: 'bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900', card: 'bg-gradient-to-br from-slate-800/80 to-purple-800/80', accent: 'bg-indigo-500', text: 'text-white', textLight: 'text-purple-200' }},
+      sunset: { id: 'sunset', name: 'Sunset Adventure', fontFamily: "'Fredoka One', cursive", colors: { primary: 'from-orange-400 via-pink-400 to-purple-500', bg: 'bg-gradient-to-br from-orange-50 via-pink-50 to-purple-100', card: 'bg-gradient-to-br from-orange-100/80 to-pink-100/80', accent: 'bg-orange-500', text: 'text-orange-900', textLight: 'text-orange-700' }},
+      ocean: { id: 'ocean', name: 'Ocean Adventure', fontFamily: "'Comfortaa', cursive", colors: { primary: 'from-blue-400 via-cyan-400 to-teal-500', bg: 'bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-100', card: 'bg-gradient-to-br from-blue-100/80 to-cyan-100/80', accent: 'bg-blue-500', text: 'text-blue-900', textLight: 'text-blue-700' }},
+      forest: { id: 'forest', name: 'Forest Friends', fontFamily: "'Kalam', cursive", colors: { primary: 'from-green-400 via-emerald-400 to-lime-500', bg: 'bg-gradient-to-br from-green-50 via-emerald-50 to-lime-100', card: 'bg-gradient-to-br from-green-100/80 to-emerald-100/80', accent: 'bg-green-600', text: 'text-green-900', textLight: 'text-green-700' }},
+      mythical: { id: 'mythical', name: 'Mythical Magic', fontFamily: "'Comfortaa', cursive", colors: { primary: 'from-purple-400 via-pink-400 to-fuchsia-500', bg: 'bg-gradient-to-br from-purple-50 via-pink-50 to-fuchsia-100', card: 'bg-gradient-to-br from-purple-100/80 to-pink-100/80', accent: 'bg-purple-600', text: 'text-purple-900', textLight: 'text-purple-700' }},
+      sky: { id: 'sky', name: 'Sky Dreams', fontFamily: "'Nunito', sans-serif", colors: { primary: 'from-sky-300 via-blue-300 to-indigo-400', bg: 'bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100', card: 'bg-gradient-to-br from-sky-100/80 to-blue-100/80', accent: 'bg-sky-500', text: 'text-sky-900', textLight: 'text-sky-700' }},
+      stuffies: { id: 'stuffies', name: 'Stuffies Paradise', fontFamily: "'Comic Neue', cursive", colors: { primary: 'from-rose-300 via-pink-300 to-purple-300', bg: 'bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50', card: 'bg-gradient-to-br from-rose-100/80 to-pink-100/80', accent: 'bg-rose-400', text: 'text-rose-900', textLight: 'text-rose-700' }},
+      rainbow: { id: 'rainbow', name: 'Rainbow Fun', fontFamily: "'Fredoka One', cursive", colors: { primary: 'from-red-400 via-yellow-400 via-green-400 via-blue-400 to-purple-400', bg: 'bg-gradient-to-br from-red-50 via-yellow-50 via-green-50 via-blue-50 to-purple-50', card: 'bg-gradient-to-br from-yellow-100/80 to-pink-100/80', accent: 'bg-gradient-to-r from-red-500 to-purple-500', text: 'text-purple-900', textLight: 'text-indigo-700', }},
+      unicorn: { id: 'unicorn', name: 'Unicorn Blast', fontFamily: 'Bubblegum Sans, cursive', colors: { primary: 'from-red-400 via-orange-400 via-yellow-300 via-green-400 via-sky-400 via-indigo-400 to-purple-500', bg: 'bg-gradient-to-br from-pink-50 via-purple-50 to-sky-50', card: 'bg-white/70', accent: 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500', text: 'text-slate-900',textLight: 'text-slate-600',  },},
+      candy: { id: 'candy', name: 'Candy Pop', fontFamily: 'Baloo 2, sans-serif', colors: { primary: 'from-fuchsia-500 via-pink-500 to-amber-400', bg: 'bg-gradient-to-br from-rose-50 via-amber-50 to-fuchsia-50', card: 'bg-white/75', accent: 'bg-gradient-to-r from-fuchsia-600 to-pink-600', text: 'text-rose-900', textLight: 'text-rose-700',},},
+ 
+    };
+
+    // -----------------------------
+    // Parent users (your final)
+    // -----------------------------
+    const PARENT_USERS = {
+      'knamgyal@gmail.com': { pin: '159632', childName: 'Claire', storageKey: 'claire_data' },
+      'hi.tammysue@gmail.com': { pin: '975321', childName: 'Siyona', storageKey: 'siyona_data' }
+    };
+
+    // -----------------------------
+    // Defaults (your final content) => template-compatible schema
+    // -----------------------------
+    const DEFAULT_QUESTS = [
+      { id: 'school-1', category: 'school', name: 'Homework 5 minutes', icon: '📚', duration: 5, stars: 1, isDefault: true },
+      { id: 'school-2', category: 'school', name: 'Homework 10 minutes', icon: '📚', duration: 10, stars: 2, isDefault: true },
+      { id: 'school-3', category: 'school', name: 'Homework 15 minutes', icon: '📚', duration: 15, stars: 3, isDefault: true },
+      { id: 'school-4', category: 'school', name: 'Read for 20 minutes', icon: '📖', duration: 20, stars: 2, isDefault: true },
+      { id: 'school-5', category: 'school', name: 'Spelling Words 10 minutes', icon: '✍️', duration: 10, stars: 2, isDefault: true },
+      { id: 'school-6', category: 'school', name: 'Study for Quiz 10 minutes', icon: '🧠', duration: 10, stars: 2, isDefault: true },
+      { id: 'school-7', category: 'school', name: 'Organize School Backpack 5 minutes', icon: '🎒', duration: 5, stars: 1, isDefault: true },
+
+      { id: 'chore-1', category: 'chore', name: 'Quick Clean Up', icon: '🧹', duration: 5, stars: 1, isDefault: true },
+      { id: 'chore-2', category: 'chore', name: 'Organize Toys', icon: '🧩', duration: 15, stars: 2, isDefault: true },
+      { id: 'chore-3', category: 'chore', name: 'Clean Your Room', icon: '🛏️', duration: 10, stars: 2, isDefault: true },
+      { id: 'chore-4', category: 'chore', name: 'Help Clean Bathroom', icon: '🚿', duration: 5, stars: 1, isDefault: true },
+      { id: 'chore-6', category: 'chore', name: 'Dishwasher Load/Unload', icon: '🍽️', duration: 10, stars: 2, isDefault: true },
+      { id: 'chore-7', category: 'chore', name: 'Make Your Bed', icon: '🛏️', duration: 5, stars: 1, isDefault: true },
+      { id: 'chore-8', category: 'chore', name: 'Help with Laundry', icon: '👕', duration: 10, stars: 2, isDefault: true },
+      { id: 'chore-9', category: 'chore', name: 'Water the Plants', icon: '🌱', duration: 5, stars: 1, isDefault: true },
+
+      { id: 'routine-1', category: 'routine', name: 'Bedtime Routine', icon: '🌙', duration: 10, stars: 2, isDefault: true },
+      { id: 'routine-2', category: 'routine', name: 'Bathroom Routine', icon: '🪥', duration: 10, stars: 2, isDefault: true },
+      { id: 'routine-3', category: 'routine', name: 'Morning Routine', icon: '☀️', duration: 10, stars: 2, isDefault: true },
+      { id: 'routine-4', category: 'routine', name: 'Yoga Routine', icon: '🧘', duration: 5, stars: 1, isDefault: true },
+      { id: 'routine-5', category: 'routine', name: 'Claire Bear Routine', icon: '🧸', duration: 5, stars: 1, isDefault: true},
+    ];
+
+    const DEFAULT_REWARDS = [
+      { id: 'reward-1', name: 'Hide & Seek', cost: 5, icon: '🙈', isDefault: true },
+      { id: 'reward-2', name: 'Choose Dinner', cost: 10, icon: '🍕', isDefault: true },
+      { id: 'reward-3', name: 'Special Dessert', cost: 10, icon: '🍰', isDefault: true },
+      { id: 'reward-4', name: '10 Minutes Screen Time', cost: 3, icon: '📱', isDefault: true },
+      { id: 'reward-5', name: 'Stay Up 30 Min Late', cost: 10, icon: '⏰', isDefault: true },
+      { id: 'reward-6', name: 'Shopping Spree', cost: 20, icon: '🛍️', isDefault: true },
+      { id: 'reward-7', name: 'Indoor Swimming', cost: 20, icon: '🏊', isDefault: true },
+      { id: 'reward-8', name: 'Family Movie Night', cost: 10, icon: '🎬', isDefault: true },
+      { id: 'reward-9', name: 'Amusement Park', cost: 30, icon: '🎡', isDefault: true },
+    ];
+
+    const BADGE_DEFINITIONS = {
+  'morning-hero': { name: 'Morning Hero', emoji: '☀️', condition: 'Complete 3 Morning Routines' },
+  'early-bird': { name: 'Early Bird', emoji: '🐦', condition: 'Complete 5 quests before noon' },
+
+  // Same IDs, updated display names
+  'math-master': { name: 'Homework Champ', emoji: '🔢', condition: 'Complete 5 homework quests' },
+  'reading-hero': { name: 'Reading Champion', emoji: '📚', condition: 'Read for 100+ minutes total' },
+
+  'organization-star': { name: 'Organization Star', emoji: '⭐', condition: 'Organize 3 times' },
+  'night-owl': { name: 'Night Owl', emoji: '🦉', condition: 'Complete 3 Bedtime Routines' },
+  'bear-care-master': { name: 'Bear Care Master', emoji: '🧸', condition: 'Complete Claire Bear Routine 3 times' },
+
+  // New badges
+  'tidy-master': { name: 'Tidy Master', emoji: '🧹', condition: 'Complete 3 clean/tidy/room/organize quests' },
+  'fresh-clean': { name: 'Fresh & Clean', emoji: '🛁', condition: 'Complete 5 Bathroom Routines' },
+};
+
+    const CLAIRE_SEED_DATA = {
+      completedQuests: [
+        { questId: 'school-4', completedAt: '2025-01-25T10:00:00Z' },
+        { questId: 'school-4', completedAt: '2025-01-26T10:00:00Z' },
+        { questId: 'chore-1', completedAt: '2025-01-25T15:00:00Z' },
+        { questId: 'chore-2', completedAt: '2025-01-26T16:00:00Z' },
+        { questId: 'chore-3', completedAt: '2025-01-27T14:00:00Z' },
+        { questId: 'chore-7', completedAt: '2025-01-28T08:00:00Z' },
+        { questId: 'routine-1', completedAt: '2025-01-25T20:00:00Z' },
+        { questId: 'routine-1', completedAt: '2025-01-26T20:00:00Z' },
+        { questId: 'routine-2', completedAt: '2025-01-27T09:00:00Z' },
+        { questId: 'routine-2', completedAt: '2025-01-28T09:00:00Z' },
+        { questId: 'routine-3', completedAt: '2025-01-27T07:00:00Z' },
+        { questId: 'routine-3', completedAt: '2025-01-28T07:00:00Z' },
+        { questId: 'school-4', completedAt: '2025-01-28T11:00:00Z' },
+	      { questId: 'chore-1', completedAt: '2025-01-27T13:00:00Z' },
+	      { questId: 'chore-2', completedAt: '2025-01-29T18:00:00Z' },
+	      { questId: 'chore-3', completedAt: '2025-01-29T14:00:00Z' },
+	      { questId: 'chore-7', completedAt: '2025-01-29T09:00:00Z' },
+	      { questId: 'routine-1', completedAt: '2025-01-29T19:00:00Z' },
+	      { questId: 'routine-1', completedAt: '2025-01-30T19:00:00Z' },
+	      { questId: 'routine-2', completedAt: '2025-01-30T10:00:00Z' },
+	      { questId: 'routine-2', completedAt: '2025-01-31T08:00:00Z' },
+        { questId: 'routine-3', completedAt: '2025-02-01T08:00:00Z' },
+
+      ],
+      redeemedRewards: [{ rewardId: 'reward-1', redeemedAt: '2025-01-28T18:00:00Z', cost: 5 },
+                        { rewardId: 'reward-1', redeemedAt: '2026-01-31T17:30:00Z', cost: 5 },
+      ],
+      badges: ['morning-hero', 'early-bird', 'math-master', 'organization-star', 'night-owl', 'reading-hero', 'bear-care-master'],
+      theme: 'space',
+      customQuests: [],
+      customRewards: [],
+      initialized: true
+    };
+
+    // -----------------------------
+    // Emoji library (lightweight)
+    // -----------------------------
+    // ----------------------------- Emoji library -----------------------------
+const EMOJI_LIBRARY = {
+  school: [
+    '📚','📖','📝','✏️','📓','📔','📒','📐','📏','📌','📎','🧮','🎒','🏫','🔤','🔢','🧠','💡'
+  ],
+  home: [
+    '🏠','🛏️','🧸','🧹','🧽','🧺','🧼','🗑️','🧴','🪣','🧦','👕','🧴','🧻','🪟','🧤'
+  ],
+  routine: [
+    '🌅','⏰','🪥','🚿','🛁','🧘','🥣','🥛','😴','📅','✅','🧴','🪮'
+  ],
+  fun: [
+    '🎮','🎲','🎨','🎵','🎤','🧩','🏀','⚽','🛝','🚲','🧸','🎯','🪀','🛼','🎳'
+  ],
+  food: [
+    '🍎','🍌','🍓','🍇','🥕','🥦','🥪','🍝','🍕','🥣','🥛','🍪','🧁','🍦'
+  ],
+  misc: [
+    '⭐','🌟','🏆','🎁','📣','🔔','🪄','🌈','🔥','✅','💎','👑','🧠','💪','🤝'
+  ],
+};
+
+const ALL_EMOJIS = Object.values(EMOJI_LIBRARY).flat();
+
+
+    // -----------------------------
+    // Theme context (template)
+    // -----------------------------
+    const ThemeContext = createContext(null);
+    const useTheme = () => useContext(ThemeContext);
+
+    // -----------------------------
+    // Helpers / logic
+    // -----------------------------
+    function safeDate(value) {
+      if (!value) return null;
+      const d = (typeof value === 'string') ? new Date(value) : new Date(value);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function starsForQuest(quest) {
+      if (typeof quest?.stars === 'number') return Math.max(1, Math.min(3, quest.stars));
+      const d = quest?.duration || 10;
+      if (d <= 10) return 1;
+      if (d <= 20) return 2;
+      return 3;
+    }
+
+    function computeEarnedBadges({ quests, completedQuests }) {
+      const byId = new Map(quests.map(q => [q.id, q]));
+      const entries = completedQuests
+      .map(c => {
+        const q = byId.get(c.questId);
+        const completedAt = safeDate(c.completedAt) || new Date();
+      return { ...c, quest: q, completedAt };
+    })
+    .filter(x => x.quest);
+
+  const countWhere = (fn) => entries.filter(fn).length;
+
+  const morningCount = countWhere(e => e.quest.id === 'routine-3');
+  const bedtimeCount = countWhere(e => e.quest.id === 'routine-1');
+  const homeworkCount = countWhere(e => e.quest.category === 'school' && e.quest.name.toLowerCase().includes('homework'));
+  const organizeCount = countWhere(e => e.quest.name.toLowerCase().includes('organize'));
+  const bearCareCount = countWhere(e => e.quest.id === 'routine-5');
+  const beforeNoonCount = countWhere(e => e.completedAt.getHours() < 12);
+
+  const tidyCount = countWhere(e => ['clean', 'tidy', 'room', 'organize'].some(k => e.quest.name.toLowerCase().includes(k)));
+  const bathroomRoutineCount = countWhere(e => e.quest.id === 'routine-2');
+
+  const readingMinutes = entries
+    .filter(e => e.quest.name.toLowerCase().includes('read'))
+    .reduce((sum, e) => sum + (e.quest.duration || 0), 0);
+
+  const earned = [];
+  if (morningCount >= 3) earned.push('morning-hero');
+  if (beforeNoonCount >= 5) earned.push('early-bird');
+  if (homeworkCount >= 5) earned.push('math-master');
+  if (organizeCount >= 3) earned.push('organization-star');
+  if (bedtimeCount >= 3) earned.push('night-owl');
+  if (readingMinutes >= 100) earned.push('reading-hero');
+  if (bearCareCount >= 3) earned.push('bear-care-master');
+
+  if (tidyCount >= 3) earned.push('tidy-master');
+  if (bathroomRoutineCount >= 5) earned.push('fresh-clean');
+
+  return earned;
+}
+
+  function computeBadgeCountsAfterCompletion({ quests, completedQuests, prevBadgeCounts }) {
+  const byId = new Map(quests.map(q => [q.id, q]));
+  const entries = completedQuests
+    .map(c => {
+      const q = byId.get(c.questId);
+      const completedAt = safeDate(c.completedAt) || new Date();
+      return { ...c, quest: q, completedAt };
+    })
+    .filter(x => x.quest);
+
+  const countWhere = (fn) => entries.filter(fn).length;
+
+  const morningCount = countWhere(e => e.quest.id === 'routine-3');
+  const bedtimeCount = countWhere(e => e.quest.id === 'routine-1');
+  const homeworkCount = countWhere(e => e.quest.category === 'school' && e.quest.name.toLowerCase().includes('homework'));
+  const organizeCount = countWhere(e => e.quest.name.toLowerCase().includes('organize'));
+  const tidyCount = countWhere(e => ['clean', 'tidy', 'room', 'organize'].some(k => e.quest.name.toLowerCase().includes(k)));
+  const bathroomRoutineCount = countWhere(e => e.quest.id === 'routine-2');
+  const bearCareCount = countWhere(e => e.quest.id === 'routine-5');
+
+  const readingMinutes = entries
+    .filter(e => e.quest.name.toLowerCase().includes('read'))
+    .reduce((sum, e) => sum + (e.quest.duration || 0), 0);
+
+  const next = { ...(prevBadgeCounts || {}) };
+  const inc = (id) => { next[id] = (next[id] || 0) + 1; };
+
+  if (morningCount > 0 && morningCount % 3 === 0) inc('morning-hero');
+  if (bedtimeCount > 0 && bedtimeCount % 3 === 0) inc('night-owl');
+  if (bathroomRoutineCount > 0 && bathroomRoutineCount % 5 === 0) inc('fresh-clean');
+  if (homeworkCount > 0 && homeworkCount % 5 === 0) inc('math-master');
+  if (organizeCount > 0 && organizeCount % 3 === 0) inc('organization-star');
+  if (tidyCount > 0 && tidyCount % 3 === 0) inc('tidy-master');
+  if (bearCareCount > 0 && bearCareCount % 3 === 0) inc('bear-care-master');
+
+  const prevReadingCount = next['reading-hero'] || 0;
+  const nextThreshold = (prevReadingCount + 1) * 100;
+  if (readingMinutes >= nextThreshold) inc('reading-hero');
+
+  return next;
+}
+
+
+    function computeTotalStars(quests = [], completedQuests = [], redeemedRewards = []) {
+      const qList = Array.isArray(quests) ? quests : [];
+      const cqList = Array.isArray(completedQuests) ? completedQuests : [];
+      const rrList = Array.isArray(redeemedRewards) ? redeemedRewards : [];
+
+      const byId = new Map(qList.map(q => [q.id, q]));
+      const earned = cqList.reduce((sum, c) => {
+        const q = byId.get(c.questId);
+        return sum + (q ? starsForQuest(q) : 0);
+      }, 0);
+      const redeemed = rrList.reduce((sum, r) => sum + (r.cost || 0), 0);
+      return Math.max(0, earned - redeemed);
+    }
+
+
+    function computeBadgeCounts(quests, completedQuests) {
+  const byId = new Map(quests.map(q => [q.id, q]));
+
+  const entries = completedQuests
+    .map(c => {
+      const q = byId.get(c.questId);
+      const completedAt = safeDate(c.completedAt) || new Date();
+      return { ...c, quest: q, completedAt };
+    })
+    .filter(x => x.quest);
+
+  const countWhere = (fn) => entries.filter(fn).length;
+
+  const morningCount = countWhere(e => e.quest.id === 'routine-3');
+  const bedtimeCount = countWhere(e => e.quest.id === 'routine-1');
+  const homeworkCount = countWhere(e =>
+    e.quest.category === 'school' && (e.quest.name || '').toLowerCase().includes('homework')
+  );
+  const organizeCount = countWhere(e => (e.quest.name || '').toLowerCase().includes('organize'));
+  const bearCareCount = countWhere(e => e.quest.id === 'routine-5');
+  const beforeNoonCount = countWhere(e => e.completedAt.getHours() < 12);
+
+  const readingMinutes = entries
+    .filter(e => (e.quest.name || '').toLowerCase().includes('read'))
+    .reduce((sum, e) => sum + (e.quest.duration || 0), 0);
+
+  return {
+    'morning-hero': Math.floor(morningCount / 3),
+    'early-bird': Math.floor(beforeNoonCount / 5),
+    'math-master': Math.floor(homeworkCount / 5),
+    'organization-star': Math.floor(organizeCount / 3),
+    'night-owl': Math.floor(bedtimeCount / 3),
+    'reading-hero': Math.floor(readingMinutes / 100),
+    'bear-care-master': Math.floor(bearCareCount / 3),
+  };
+}
+
+    
+
+
+    // -----------------------------
+    // Reducer + state
+    // -----------------------------
+    const initialAppState = {
+      quests: [],
+      rewards: [],
+      completedQuests: [],
+      redeemedRewards: [],
+      badges: [],
+      badgeCounts: {},
+      totalStars: 0,
+
+      activeQuest: null,
+      currentStreak: 0,
+      longestStreak: 0,
+      lastCompletedDate: null,
+      statsBaseline: null,
+      transactionLog: [],
+
+    };
+
+    const migrateQuestId = (id) => (id === 'chore-5' ? 'routine-5' : id);
+
+
+    function appReducer(state, action) {
+      switch (action.type) {
+        case 'LOAD_STATE': {
+          const merged = { ...state, ...action.payload };
+          merged.quests = Array.isArray(merged.quests) ? merged.quests : [];
+          merged.rewards = Array.isArray(merged.rewards) ? merged.rewards : [];
+          merged.completedQuests = Array.isArray(merged.completedQuests) ? merged.completedQuests : [];
+          merged.redeemedRewards = Array.isArray(merged.redeemedRewards) ? merged.redeemedRewards : [];
+          merged.badges = Array.isArray(merged.badges) ? merged.badges : [];
+          // Create a baseline once, so UI starts at desired numbers but grows afterward.
+          // Create a baseline once, so UI starts at desired numbers but grows afterward.
+          if (!merged.statsBaseline) {
+            merged.statsBaseline = {
+              totalQuests: 20,
+              totalStars: 20, // <-- this drives the “starting stars”
+              currentStreak: 5,
+              bestStreak: 5,
+              categoryCounts: { school: 2, chore: 8, routine: 10 },
+              completedQuestsAtBaseline: (merged.completedQuests || []).length,
+              redeemedRewardsAtBaseline: (merged.redeemedRewards || []).length,
+              badgeCounts: {
+                'morning-hero': 1,
+                'early-bird': 1,
+                'math-master': 1,
+                'organization-star': 1,
+                'night-owl': 1,
+                'reading-hero': 1,
+                'bear-care-master': 1,
+              },
+           };
+          }
+
+
+          merged.badgeCounts = (merged.badgeCounts && typeof merged.badgeCounts === 'object') ? merged.badgeCounts : {};
+          merged.totalStars = typeof merged.totalStars === 'number' ? merged.totalStars : 0;
+          merged.statsBaseline = merged.statsBaseline && typeof merged.statsBaseline === 'object' ? merged.statsBaseline: null;
+
+          return merged;
+        }
+
+        case 'ADD_QUEST': {
+          const q = action.payload;
+          const newQuest = { ...q, id: `custom-${Date.now()}-${Math.random().toString(16).slice(2)}`, isDefault: false };
+          return { ...state, quests: [...state.quests, newQuest] };
+        }
+
+        case 'DELETE_QUEST': {
+          const id = action.payload;
+          return { ...state, quests: state.quests.filter(q => q.id !== id) };
+        }
+
+       case 'START_QUEST': {
+         const quest = action.payload;
+         const sessionId = `quest-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+         const durationMs = (quest.duration || 1) * 60 * 1000;
+         return { ...state, activeQuest: { ...quest, sessionId, endTime: Date.now() + durationMs } };
+       }
+
+
+        case 'CANCEL_QUEST':
+          return { ...state, activeQuest: null };
+
+        case "COMPLETE_QUEST": {
+        const quest = action.payload;
+
+        const now = new Date();
+        const today = now.toDateString();
+        const yesterday = new Date(now.getTime() - 86400000).toDateString();
+
+        // Baseline streak only matters before we have any streak history.
+        const baselineStreak = state.statsBaseline?.currentStreak ?? 0;
+        const baselineBest = state.statsBaseline?.bestStreak ?? 0;
+
+        const hasHistory = !!state.lastCompletedDate;
+
+        // If we have no history yet, allow baseline to seed the prior streak.
+        let priorStreak = state.currentStreak ?? 0;
+        if (!hasHistory && priorStreak === 0 && baselineStreak > 0) priorStreak = baselineStreak;
+
+        let newStreak;
+        if (state.lastCompletedDate === today) {
+    newStreak = priorStreak;
+        } else if (state.lastCompletedDate === yesterday || (!hasHistory && baselineStreak > 0)) {
+    newStreak = priorStreak + 1;
+        } else {
+          newStreak = 1;
+        }
+
+        const newLongest = Math.max(state.longestStreak ?? 0, baselineBest, newStreak);
+
+        const completedEntry = { questId: quest.id, completedAt: now.toISOString() };
+        const completedQuests = [...(state.completedQuests || []), completedEntry];
+
+        const badgeCounts = computeBadgeCounts(state.quests, completedQuests);
+        const badges = Object.entries(badgeCounts)
+          .filter(([, c]) => c > 0)
+          .map(([id]) => id);
+
+        const totalStars = computeTotalStars(state.quests, completedQuests, state.redeemedRewards);
+
+  const tx = {
+    type: "QUEST_COMPLETE",
+    timestamp: Date.now(),
+    questId: quest.id,
+    questName: quest.name,
+    starsAwarded: starsForQuest(quest),
+  };
+
+  return {
+    ...state,
+    completedQuests,
+    badges,
+    badgeCounts,
+    totalStars,
+    activeQuest: null,
+    currentStreak: newStreak,
+    longestStreak: newLongest,
+    lastCompletedDate: today,
+    transactionLog: [...(state.transactionLog || []), tx],
+  };
+}
+
+        case 'REDEEM_REWARD': {
+          const reward = action.payload;
+          if (state.totalStars < reward.cost) return state;
+
+          const redemption = { rewardId: reward.id, redeemedAt: new Date().toISOString(), cost: reward.cost };
+          const redeemedRewards = [...(state.redeemedRewards || []), redemption];
+
+          const totalStars = computeTotalStars(state.quests, state.completedQuests, redeemedRewards);
+
+          const tx = { type: 'REWARD_REDEEM', timestamp: Date.now(), rewardId: reward.id, rewardName: reward.name, starsCost: reward.cost };
+
+          return { ...state, redeemedRewards, totalStars, transactionLog: [...(state.transactionLog || []), tx] };
+        }
+
+        case 'ADD_REWARD': {
+          const r = action.payload;
+          const newReward = { ...r, id: `custom-reward-${Date.now()}-${Math.random().toString(16).slice(2)}`, isDefault: false };
+          return { ...state, rewards: [...state.rewards, newReward] };
+        }
+
+        case 'DELETE_REWARD': {
+          const id = action.payload;
+          return { ...state, rewards: state.rewards.filter(r => r.id !== id) };
+        }
+
+        case 'RECALC_TOTALS': {
+          const badgeCounts = computeBadgeCounts(state.quests, state.completedQuests);
+          const badges = Object.entries(badgeCounts).filter(([, c]) => c > 0).map(([id]) => id);
+          const totalStars = computeTotalStars(state.quests, state.completedQuests, state.redeemedRewards);
+          return { ...state, badges, badgeCounts, totalStars };
+      }
+
+        default:
+          return state;
+      }
+    }
+
+    // -----------------------------
+    // UI Components (template)
+    // -----------------------------
+    function EmojiPicker({ onSelect, onClose }) {
+      const theme = useTheme();
+      const [searchTerm, setSearchTerm] = useState('');
+      const [selectedCategory, setSelectedCategory] = useState('all');
+
+      const base = selectedCategory === 'all' ? ALL_EMOJIS : (EMOJI_LIBRARY[selectedCategory] || []);
+      const searched = searchTerm.trim()
+        ? base.filter(e => e.includes(searchTerm.trim()) || e.toLowerCase().includes(searchTerm.trim().toLowerCase()))
+        : base;
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+          <div className={`${theme.colors.card} rounded-3xl p-6 max-w-md w-full shadow-2xl backdrop-blur-lg border-2 border-opacity-20 max-h-[90vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-xl font-bold ${theme.colors.text}`}>Choose an Icon</h3>
+              <button onClick={onClose} className={`p-2 rounded-full ${theme.colors.textLight} hover:bg-white/30 transition-colors duration-200`}>
+                <Icons.X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <div className="relative">
+                <Icons.Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${theme.colors.textLight}`} />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search emojis..."
+                  className={`w-full pl-10 pr-4 py-3 rounded-xl bg-white/50 ${theme.colors.text} border-2 border-opacity-20 focus:outline-none focus:ring-2 focus:ring-opacity-50`}
+                />
+              </div>
+            </div>
+
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className={`px-3 py-1 rounded-full text-sm font-semibold transition-all ${selectedCategory === 'all' ? `${theme.colors.accent} text-white` : `bg-white/40 ${theme.colors.textLight}`}`}
+              >
+                All
+              </button>
+              {Object.keys(EMOJI_LIBRARY).map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1 rounded-full text-sm font-semibold transition-all capitalize ${selectedCategory === cat ? `${theme.colors.accent} text-white` : `bg-white/40 ${theme.colors.textLight}`}`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            <div className="emoji-grid">
+              {searched.map((emoji, idx) => (
+                <button key={idx} onClick={() => { onSelect(emoji); onClose(); }} className="emoji-button">
+                  {emoji}
+                </button>
+              ))}
+              {searched.length === 0 && (
+                <p className={`text-center py-8 ${theme.colors.textLight}`}>No emojis found. Try a different search!</p>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function QuestCard({ quest, onStart, onDelete }) {
+      const theme = useTheme();
+      const stars = starsForQuest(quest);
+
+      return (
+        <div className={`${theme.colors.card} rounded-3xl p-6 shadow-xl backdrop-blur-lg border-2 border-opacity-20 hover:scale-105 transition-all duration-200 group relative overflow-hidden`}>
+          <div className={`absolute inset-0 bg-gradient-to-br ${theme.colors.primary} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+          <div className="relative z-10">
+            <div className="flex justify-between items-start mb-4">
+              <div className="text-4xl">{quest.icon}</div>
+              <button
+                onClick={onDelete}
+                className={`p-2 rounded-full ${quest.isDefault ? 'bg-white/30' : 'bg-red-500/20 hover:bg-red-500'} ${quest.isDefault ? theme.colors.textLight : 'text-red-600 hover:text-white'} transition-colors duration-200`}
+                title="Delete (Parent PIN required)"
+              >
+                <Icons.X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <h3 className={`text-lg font-bold ${theme.colors.text} mb-2`}>{quest.name}</h3>
+
+            <div className="flex items-center justify-between mb-4">
+              <div className={`flex items-center space-x-1 ${theme.colors.textLight}`}>
+                <Icons.Clock className="w-4 h-4" />
+                <span className="text-sm font-semibold">{quest.duration} min</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                {Array(stars).fill(0).map((_, i) => (
+                  <Icons.Star key={i} className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={onStart}
+              className={`w-full ${theme.colors.accent} text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2 group-hover:scale-105`}
+            >
+              <Icons.Target className="w-5 h-5" />
+              <span>Start Quest</span>
+              <Icons.ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    function DashboardView({ quests, onStartQuest, onDeleteQuest, onAddQuest, questCategory, setQuestCategory }) {
+      const theme = useTheme();
+      const categories = [
+        { id: 'school', label: 'School Quests', emoji: '📚' },
+        { id: 'chore', label: 'Chore Quests', emoji: '🧹' },
+        { id: 'routine', label: 'Routine Quests', emoji: '🌙' },
+      ];
+
+      const filtered = quests.filter(q => q.category === questCategory);
+
+      return (
+        <div className="space-y-6">
+          <div className={`${theme.colors.card} rounded-3xl p-4 shadow-2xl backdrop-blur-lg border-2 border-opacity-20`}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setQuestCategory(cat.id)}
+                  className={`flex flex-col items-center justify-center p-4 rounded-2xl transition-all duration-200 ${
+                    questCategory === cat.id
+                      ? `${theme.colors.accent} text-white shadow-xl scale-105`
+                      : `bg-white/40 ${theme.colors.textLight} hover:bg-white/60`
+                  }`}
+                >
+                  <span className="text-3xl mb-2">{cat.emoji}</span>
+                  <span className="font-bold text-sm sm:text-base">{cat.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filtered.map(q => (
+              <QuestCard
+                key={q.id}
+                quest={q}
+                onStart={() => onStartQuest(q)}
+                onDelete={() => onDeleteQuest(q.id)}
+              />
+            ))}
+
+            <button
+              onClick={onAddQuest}
+              className={`${theme.colors.card} rounded-3xl p-6 shadow-xl backdrop-blur-lg border-2 border-dashed border-opacity-40 hover:scale-105 transition-all duration-200 flex flex-col items-center justify-center min-h-[200px] group`}
+            >
+              <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${theme.colors.primary} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200`}>
+                <Icons.Plus className="w-8 h-8 text-white" />
+              </div>
+              <span className={`text-lg font-bold ${theme.colors.text}`}>Add New Quest</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    function ActiveQuestView({ quest, onComplete, onCancel, requestEarlyComplete }) {
+  const theme = useTheme();
+
+  const totalSeconds = quest.duration * 60;
+  const [timeRemaining, setTimeRemaining] = useState(totalSeconds);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+
+  const timerRef = useRef(null);
+  const endAtRef = useRef(null);
+  const completedRef = useRef(false);
+
+  const stars = starsForQuest(quest);
+  const progress = totalSeconds > 0 ? ((totalSeconds - timeRemaining) / totalSeconds) * 100 : 0;
+
+  const updateRemaining = React.useCallback(() => {
+    const endAt = endAtRef.current;
+    if (!endAt) return;
+
+    const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+    setTimeRemaining(remaining);
+
+    if (remaining <= 0 && !completedRef.current) {
+      completedRef.current = true;
+
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      endAtRef.current = null;
+
+      setIsRunning(false);
+      setIsPaused(false);
+      setShowCelebration(true);
+
+      setTimeout(() => onComplete(quest), 1200);
+    }
+  }, [onComplete, quest]);
+
+  useEffect(() => {
+    // Reset view when a new quest session starts (STARTQUEST sets sessionId)
+    completedRef.current = false;
+    endAtRef.current = null;
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    setTimeRemaining(totalSeconds);
+    setIsRunning(false);
+    setIsPaused(false);
+    setShowCelebration(false);
+  }, [quest?.sessionId, totalSeconds]);
+
+  useEffect(() => {
+    if (!isRunning || isPaused || showCelebration) return;
+
+    updateRemaining();
+    timerRef.current = setInterval(updateRemaining, 1000);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [isRunning, isPaused, showCelebration, updateRemaining]);
+
+  useEffect(() => {
+    function handleVisibilityOrFocus() {
+      if (document.visibilityState === 'visible') updateRemaining();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [updateRemaining]);
+
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}${secs.toString().padStart(2, '0')}`;
+  }
+
+  function handlePlayPause() {
+    if (showCelebration) return;
+
+    if (!isRunning) {
+      endAtRef.current = Date.now() + timeRemaining * 1000;
+      setIsRunning(true);
+      setIsPaused(false);
+      return;
+    }
+
+    if (isPaused) {
+      endAtRef.current = Date.now() + timeRemaining * 1000;
+      setIsPaused(false);
+      return;
+    }
+
+    // Pause
+    setIsPaused(true);
+    endAtRef.current = null;
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+
+  function handleReset() {
+    completedRef.current = false;
+    endAtRef.current = null;
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    setTimeRemaining(totalSeconds);
+    setIsRunning(false);
+    setIsPaused(false);
+    setShowCelebration(false);
+  }
+
+  function handleCompleteNow() {
+    if (showCelebration) return;
+
+    if (typeof requestEarlyComplete === 'function') {
+      const ok = requestEarlyComplete();
+      if (!ok) return;
+    }
+
+    completedRef.current = true;
+    endAtRef.current = null;
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    setTimeRemaining(0);
+    setIsRunning(false);
+    setIsPaused(false);
+    setShowCelebration(true);
+
+    setTimeout(() => onComplete(quest), 1200);
+  }
+
+  return (
+    <div className={`${theme.colors.card} rounded-3xl p-8 shadow-2xl backdrop-blur-lg border-2 border-opacity-20 relative overflow-hidden`}>
+      {showCelebration && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="text-center animate-bounce">
+            <div className="text-8xl mb-4">{quest.icon}</div>
+            <h2 className="text-4xl font-bold text-white mb-2">Quest Complete!</h2>
+            <div className="flex items-center justify-center space-x-2">
+              {Array(stars).fill(0).map((_, i) => (
+                <Icons.Star key={i} className="w-12 h-12 text-yellow-400 fill-yellow-400 animate-spin" />
+              ))}
+            </div>
+            <p className="text-white text-xl mt-4">{stars} Stars Earned!</p>
+          </div>
+        </div>
+      )}
+
+      <div className="w-full h-4 bg-white/30 rounded-full overflow-hidden mb-8">
+        <div
+          className={`h-full bg-gradient-to-r ${theme.colors.primary} transition-all duration-1000 ease-linear`}
+          style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+        />
+      </div>
+
+      <div className="text-center">
+        <div className="text-8xl mb-6 animate-bounce">{quest.icon}</div>
+        <h2 className={`text-3xl sm:text-4xl font-bold ${theme.colors.text} mb-4`}>{quest.name}</h2>
+
+        <div className="flex items-center justify-center space-x-2 mb-8">
+          {Array(stars).fill(0).map((_, i) => (
+            <Icons.Star key={i} className="w-8 h-8 text-yellow-500 fill-yellow-500" />
+          ))}
+        </div>
+
+        <div className={`text-8xl sm:text-9xl font-bold ${theme.colors.text} mb-8 font-mono`}>
+          {formatTime(timeRemaining)}
+        </div>
+
+        <div className="flex items-center justify-center space-x-4 mb-6">
+          <button
+            onClick={handlePlayPause}
+            className={`p-6 ${theme.colors.accent} text-white rounded-full shadow-2xl hover:scale-110 transition-all duration-200`}
+            aria-label={isRunning && !isPaused ? 'Pause' : 'Play'}
+          >
+            {isRunning && !isPaused ? <Icons.Pause className="w-8 h-8" /> : <Icons.Play className="w-8 h-8" />}
+          </button>
+
+          <button
+            onClick={handleReset}
+            className={`p-6 ${theme.colors.card} ${theme.colors.text} rounded-full shadow-xl hover:scale-110 transition-all duration-200 border-2 border-opacity-30`}
+            aria-label="Reset"
+          >
+            <Icons.RotateCcw className="w-8 h-8" />
+          </button>
+        </div>
+
+        <div className="flex flex-col items-center justify-center space-y-3">
+          <button
+            onClick={handleCompleteNow}
+            className="px-8 py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition-colors duration-200"
+            title="Parent PIN required"
+          >
+            Complete Quest Now
+          </button>
+
+          <button
+            onClick={onCancel}
+            className="px-8 py-3 bg-gray-400 text-white rounded-xl font-bold hover:bg-gray-500 transition-colors duration-200"
+          >
+            Cancel Quest
+          </button>
+        </div>
+
+        <div className={`mt-8 ${theme.colors.textLight} text-sm`}>
+          Earn more stars and badges!
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+    function RewardsView({ rewards, totalStars, redeemedRewards, onRedeemReward, onAddReward, onDeleteReward }) {
+      const theme = useTheme();
+      const [isRedeeming, setIsRedeeming] = useState(null);
+
+      function handleRedeem(reward) {
+        if (isRedeeming || totalStars < reward.cost) return;
+        setIsRedeeming(reward.id);
+        setTimeout(() => {
+          onRedeemReward(reward);
+          setIsRedeeming(null);
+        }, 250);
+      }
+
+      return (
+        <div className="space-y-6">
+          <div className={`${theme.colors.card} rounded-3xl p-6 shadow-2xl backdrop-blur-lg border-2 border-opacity-20`}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className={`text-2xl font-bold ${theme.colors.text} flex items-center`}>
+                <Icons.Gift className="w-7 h-7 mr-3" />
+                Rewards Shop
+              </h2>
+              <div className={`${theme.colors.accent} text-white px-6 py-3 rounded-full shadow-lg flex items-center space-x-2`}>
+                <Icons.Star className="w-6 h-6 fill-white" />
+                <span className="text-2xl font-bold">{totalStars}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {rewards.map(reward => (
+                <div key={reward.id} className={`${theme.colors.card} rounded-3xl p-6 shadow-xl backdrop-blur-lg border-2 border-opacity-20 hover:scale-105 transition-all duration-200 relative group`}>
+                  <button
+                    onClick={() => onDeleteReward(reward.id)}
+                    className="absolute top-4 right-4 p-2 rounded-full bg-red-500/20 hover:bg-red-500 text-red-600 hover:text-white transition-colors duration-200 opacity-0 group-hover:opacity-100"
+                    title="Delete reward"
+                  >
+                    <Icons.X className="w-4 h-4" />
+                  </button>
+
+                  <div className="text-6xl mb-4 text-center">{reward.icon}</div>
+                  <h3 className={`text-lg font-bold ${theme.colors.text} mb-3 text-center`}>{reward.name}</h3>
+
+                  <div className="flex items-center justify-center space-x-2 mb-4">
+                    <Icons.Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                    <span className={`text-xl font-bold ${theme.colors.text}`}>{reward.cost}</span>
+                  </div>
+
+                  <button
+                    onClick={() => handleRedeem(reward)}
+                    disabled={totalStars < reward.cost || isRedeeming === reward.id}
+                    className={`w-full py-3 rounded-xl font-bold transition-all duration-200 ${
+                      totalStars >= reward.cost
+                        ? `${theme.colors.accent} text-white hover:shadow-lg hover:scale-105`
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {isRedeeming === reward.id ? 'Redeeming...' : (totalStars >= reward.cost ? 'Redeem' : 'Not enough stars')}
+                  </button>
+                </div>
+              ))}
+
+              <button
+                onClick={onAddReward}
+                className={`${theme.colors.card} rounded-3xl p-6 shadow-xl backdrop-blur-lg border-2 border-dashed border-opacity-40 hover:scale-105 transition-all duration-200 flex flex-col items-center justify-center min-h-[250px] group`}
+              >
+                <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${theme.colors.primary} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200`}>
+                  <Icons.Plus className="w-8 h-8 text-white" />
+                </div>
+                <span className={`text-lg font-bold ${theme.colors.text}`}>Add Custom Reward</span>
+              </button>
+            </div>
+          </div>
+
+          {redeemedRewards.length > 0 && (
+            <div className={`${theme.colors.card} rounded-3xl p-6 shadow-2xl backdrop-blur-lg border-2 border-opacity-20`}>
+              <h3 className={`text-xl font-bold ${theme.colors.text} mb-4 flex items-center`}>
+                <Icons.Check className="w-6 h-6 mr-2" />
+                Recently Redeemed
+              </h3>
+              <div className="space-y-2">
+                {redeemedRewards.slice(-6).reverse().map((r, idx) => {
+                  const rewardObj = rewards.find(x => x.id === r.rewardId) || {};
+                  const when = safeDate(r.redeemedAt);
+                  return (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-white/40 rounded-xl">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">{rewardObj.icon || '🎁'}</span>
+                        <div>
+                          <span className={`font-semibold ${theme.colors.text} block`}>{rewardObj.name || 'Reward'}</span>
+                          <span className={`text-xs ${theme.colors.textLight}`}>{r.cost} stars redeemed</span>
+                        </div>
+                      </div>
+                      <span className={`text-sm ${theme.colors.textLight}`}>{when ? when.toLocaleDateString() : ''}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function AchievementsView({
+  badges,
+  badgeCounts,
+  completedQuests,
+  currentStreak,
+  longestStreak,
+  quests,
+  statsBaseline,
+}) {
+  const theme = useTheme();
+
+  // One baseline object that covers everything this view needs
+  const baseline = statsBaseline || {
+    totalQuests: 0,
+    currentStreak: 0,
+    bestStreak: 0,
+    categoryCounts: { school: 0, chore: 0, routine: 0 },
+    completedQuestsAtBaseline: 0,
+    badgeCounts: {},
+  };
+
+  const baselineIndex = Number.isFinite(baseline.completedQuestsAtBaseline)
+    ? baseline.completedQuestsAtBaseline
+    : 0;
+
+  // Baseline-aware totals (matches your Quick Stats logic)
+  const completedLen = Array.isArray(completedQuests) ? completedQuests.length : 0;
+  const newCompletedCount = Math.max(0, completedLen - baselineIndex);
+  const displayTotalQuests = (baseline.totalQuests || 0) + newCompletedCount;
+
+  // Baseline-aware streaks
+  const displayCurrentStreak = Math.max(currentStreak || 0, baseline.currentStreak || 0);
+  const displayBestStreak = Math.max(longestStreak || 0, baseline.bestStreak || 0);
+
+  // Baseline-aware badge counts
+  const baseBadgeCounts = baseline.badgeCounts || {};
+  const liveBadgeCounts = badgeCounts || {};
+  const displayBadgeCounts = { ...baseBadgeCounts };
+
+  for (const [id, count] of Object.entries(liveBadgeCounts)) {
+    const n = Number(count) || 0;
+    displayBadgeCounts[id] = (displayBadgeCounts[id] || 0) + n;
+  }
+
+  const distinctBadgesEarned = Object.values(displayBadgeCounts).filter((c) => (Number(c) || 0) > 0).length;
+
+  const earnedBadges = Object.entries(displayBadgeCounts)
+    .filter(([, count]) => (Number(count) || 0) > 0)
+    .map(([id, count]) => ({ id, count: Number(count) || 0, ...(BADGE_DEFINITIONS[id] || {}) }))
+    .filter((b) => b.name);
+
+  // Category progress (keep your existing logic)
+  const newCompleted = Array.isArray(completedQuests) ? completedQuests.slice(baselineIndex) : [];
+  const byId = new Map((quests || []).map((q) => [q.id, q]));
+
+  const deltaCats = { school: 0, chore: 0, routine: 0 };
+  newCompleted.forEach((c) => {
+    const q = byId.get(c.questId);
+    if (!q) return;
+    if (deltaCats[q.category] !== undefined) deltaCats[q.category] += 1;
+  });
+
+  const displayCats = {
+    school: (baseline.categoryCounts?.school || 0) + deltaCats.school,
+    chore: (baseline.categoryCounts?.chore || 0) + deltaCats.chore,
+    routine: (baseline.categoryCounts?.routine || 0) + deltaCats.routine,
+  };
+
+  const totalCompleted = displayCats.school + displayCats.chore + displayCats.routine;
+
+  const progressCats = [
+    { id: "school", label: "School Quests", emoji: "📚", count: displayCats.school },
+    { id: "chore", label: "Chore Quests", emoji: "🧹", count: displayCats.chore },
+    { id: "routine", label: "Routine Quests", emoji: "⏰", count: displayCats.routine },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className={`${theme.colors.card} rounded-3xl p-6 shadow-xl backdrop-blur-lg border-2 border-opacity-20`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`text-sm ${theme.colors.textLight} mb-1`}>Total Quests</p>
+              <p className={`text-3xl font-bold ${theme.colors.text}`}>{displayTotalQuests}</p>
+            </div>
+            <Icons.Trophy className={`w-12 h-12 ${theme.colors.textLight}`} />
+          </div>
+        </div>
+
+        <div className={`${theme.colors.card} rounded-3xl p-6 shadow-xl backdrop-blur-lg border-2 border-opacity-20`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`text-sm ${theme.colors.textLight} mb-1`}>Badges Earned</p>
+              <p className={`text-3xl font-bold ${theme.colors.text}`}>{distinctBadgesEarned}</p>
+            </div>
+            <Icons.Award className={`w-12 h-12 ${theme.colors.textLight}`} />
+          </div>
+        </div>
+
+        <div className={`${theme.colors.card} rounded-3xl p-6 shadow-xl backdrop-blur-lg border-2 border-opacity-20`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`text-sm ${theme.colors.textLight} mb-1`}>Current Streak</p>
+              <p className={`text-3xl font-bold ${theme.colors.text}`}>{displayCurrentStreak}</p>
+            </div>
+            <Icons.Zap className={`w-12 h-12 ${theme.colors.textLight}`} />
+          </div>
+        </div>
+
+        <div className={`${theme.colors.card} rounded-3xl p-6 shadow-xl backdrop-blur-lg border-2 border-opacity-20`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`text-sm ${theme.colors.textLight} mb-1`}>Best Streak</p>
+              <p className={`text-3xl font-bold ${theme.colors.text}`}>{displayBestStreak}</p>
+            </div>
+            <Icons.Crown className={`w-12 h-12 ${theme.colors.textLight}`} />
+          </div>
+        </div>
+      </div>
+
+      <div className={`${theme.colors.card} rounded-3xl p-6 shadow-2xl backdrop-blur-lg border-2 border-opacity-20`}>
+        <h2 className={`text-2xl font-bold ${theme.colors.text} mb-6 flex items-center`}>
+          <Icons.Target className="w-7 h-7 mr-3" />
+          Quest Progress by Category
+        </h2>
+
+        <div className="space-y-4">
+          {progressCats.map((cat) => (
+            <div key={cat.id} className="flex items-center space-x-4">
+              <span className="text-3xl">{cat.emoji}</span>
+              <div className="flex-1">
+                <div className="flex justify-between mb-2">
+                  <span className={`font-semibold ${theme.colors.text}`}>{cat.label}</span>
+                  <span className={`font-bold ${theme.colors.text}`}>{cat.count} completed</span>
+                </div>
+
+                <div className="w-full h-3 bg-white/30 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full bg-gradient-to-r ${theme.colors.primary} transition-all duration-500`}
+                    style={{
+                      width: totalCompleted > 0 ? Math.min(100, (cat.count / totalCompleted) * 100) : 0,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className={`${theme.colors.card} rounded-3xl p-6 shadow-2xl backdrop-blur-lg border-2 border-opacity-20`}>
+        <h2 className={`text-2xl font-bold ${theme.colors.text} mb-6 flex items-center`}>
+          <Icons.Award className="w-7 h-7 mr-3" />
+          Badge Collection ({distinctBadgesEarned})
+        </h2>
+
+        {earnedBadges.length === 0 ? (
+          <p className={`${theme.colors.textLight}`}>No badges earned yet.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {earnedBadges.map((b) => (
+              <div
+                key={b.id}
+                className="p-4 bg-white/40 rounded-2xl text-center hover:scale-110 transition-transform duration-200 border-2 border-opacity-20"
+              >
+                <div className="text-3xl mb-2">{b.emoji}</div>
+                <p className={`text-sm font-bold ${theme.colors.text}`}>{b.name}</p>
+                <p className={`text-xs ${theme.colors.textLight} mt-1`}>
+                  Earned {b.count} {b.count === 1 ? "time" : "times"}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+    function SettingsModal({ onClose, currentTheme, setCurrentTheme }) {
+      const theme = useTheme();
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+          <div className={`${theme.colors.card} rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl backdrop-blur-lg border-2 border-opacity-20 max-h-[90vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-2xl sm:text-3xl font-bold ${theme.colors.text} flex items-center`}>
+                <Icons.Settings className="w-7 h-7 mr-3" />
+                Settings
+              </h2>
+              <button onClick={onClose} className={`p-2 rounded-full ${theme.colors.textLight} hover:bg-white/30 transition-colors duration-200`}>
+                <Icons.X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <h3 className={`text-lg font-bold ${theme.colors.text} mb-4`}>Choose Your Theme</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {Object.entries(THEMES).map(([key, option]) => (
+                    <button
+                      key={key}
+                      onClick={() => setCurrentTheme(key)}
+                      className={`p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
+                        currentTheme === key ? 'border-current scale-105 shadow-xl' : 'border-transparent hover:scale-105'
+                      }`}
+                      style={{ background: 'transparent', fontFamily: option.fontFamily }}
+                    >
+                      <div className="font-bold text-lg mb-1" style={{ color: '#111' }}>{option.name}</div>
+                      <div className="text-sm" style={{ color: '#333' }}>{currentTheme === key ? 'Active' : 'Tap to switch'}</div>
+                      <div className={`mt-3 h-10 rounded-xl bg-gradient-to-r ${option.colors.primary}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={`p-4 bg-white/40 rounded-2xl ${theme.colors.textLight}`}>
+                <p className="text-sm">
+                   💡 <strong>Tip:</strong> Each theme has its own unique look and feel! Try them all to find your favorite adventure style.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function AddQuestModal({ category, onClose, onAdd }) {
+  const theme = useTheme();
+
+  const [name, setName] = useState("");
+  const [duration, setDuration] = useState(10);
+  const [icon, setIcon] = useState("");
+  const [stars, setStars] = useState(1);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    onAdd({
+      name: name.trim(),
+      duration: Math.max(1, Math.min(60, Number(duration) || 10)),
+      icon: icon,
+      category,
+      stars: Math.max(1, Math.min(3, Number(stars) || 1)),
+    });
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+      <div className={`${theme.colors.card} rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl backdrop-blur-lg border-2 border-opacity-20`}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className={`text-2xl font-bold ${theme.colors.text}`}>Add New Quest</h2>
+          <button
+            onClick={onClose}
+            className={`p-2 rounded-full ${theme.colors.textLight} hover:bg-white/30 transition-colors duration-200`}
+            aria-label="Close"
+          >
+            <Icons.X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Quest Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={`w-full px-4 py-3 rounded-xl bg-white/50 ${theme.colors.text} border-2 border-opacity-20 focus:outline-none focus:ring-2 focus:ring-opacity-50`}
+              placeholder="e.g., Make your bed"
+              maxLength={40}
+              required
+            />
+          </div>
+
+          <div>
+            <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Time (minutes)</label>
+            <input
+              type="number"
+              min="1"
+              max="60"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              className={`w-full px-4 py-3 rounded-xl bg-white/50 ${theme.colors.text} border-2 border-opacity-20 focus:outline-none focus:ring-2 focus:ring-opacity-50`}
+            />
+          </div>
+
+          <div>
+            <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Stars Reward</label>
+            <select
+              value={stars}
+              onChange={(e) => setStars(Number(e.target.value))}
+              className={`w-full px-4 py-3 rounded-xl bg-white/50 ${theme.colors.text} border-2 border-opacity-20 focus:outline-none focus:ring-2 focus:ring-opacity-50`}
+            >
+              <option value={1}>1 ⭐</option>
+              <option value={2}>2 ⭐⭐</option>
+              <option value={3}>3 ⭐⭐⭐</option>
+            </select>
+          </div>
+
+          <div>
+            <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Icon (emoji)</label>
+            <input
+              type="text"
+              value={icon}
+              readOnly
+              onClick={() => setShowEmojiPicker(true)}
+              className={`w-full px-4 py-3 rounded-xl bg-white/50 ${theme.colors.text} border-2 border-opacity-20 focus:outline-none focus:ring-2 focus:ring-opacity-50 text-2xl text-center cursor-pointer`}
+              placeholder="Tap to pick"
+              maxLength={2}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className={`w-full ${theme.colors.accent} text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all duration-200`}
+          >
+            Create Quest
+          </button>
+        </form>
+      </div>
+
+      {showEmojiPicker && (
+        <EmojiPicker
+          onSelect={(emoji) => setIcon(emoji)}
+          onClose={() => setShowEmojiPicker(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+
+    function AddRewardModal({ onClose, onAdd }) {
+  const theme = useTheme();
+
+  const [name, setName] = useState("");
+  const [cost, setCost] = useState(10);
+  const [icon, setIcon] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    onAdd({
+      name: name.trim(),
+      cost: Math.max(1, Math.min(99, Number(cost) || 1)),
+      icon: icon,
+    });
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+      <div className={`${theme.colors.card} rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl backdrop-blur-lg border-2 border-opacity-20`}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className={`text-2xl font-bold ${theme.colors.text}`}>Add Custom Reward</h2>
+          <button
+            onClick={onClose}
+            className={`p-2 rounded-full ${theme.colors.textLight} hover:bg-white/30 transition-colors duration-200`}
+            aria-label="Close"
+          >
+            <Icons.X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Reward Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={`w-full px-4 py-3 rounded-xl bg-white/50 ${theme.colors.text} border-2 border-opacity-20 focus:outline-none focus:ring-2 focus:ring-opacity-50`}
+              placeholder="e.g., 10 minutes screen time"
+              maxLength={40}
+              required
+            />
+          </div>
+
+          <div>
+            <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Star Cost</label>
+            <input
+              type="number"
+              min="1"
+              max="99"
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+              className={`w-full px-4 py-3 rounded-xl bg-white/50 ${theme.colors.text} border-2 border-opacity-20 focus:outline-none focus:ring-2 focus:ring-opacity-50`}
+            />
+
+            <div className="flex items-center justify-center space-x-2 mt-2">
+              <Icons.Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+              <span className={`text-lg font-bold ${theme.colors.text}`}>{Number(cost) || 0}</span>
+            </div>
+          </div>
+
+          <div>
+            <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Icon (emoji)</label>
+            <input
+              type="text"
+              value={icon}
+              readOnly
+              onClick={() => setShowEmojiPicker(true)}
+              className={`w-full px-4 py-3 rounded-xl bg-white/50 ${theme.colors.text} border-2 border-opacity-20 focus:outline-none focus:ring-2 focus:ring-opacity-50 text-2xl text-center cursor-pointer`}
+              placeholder="Tap to pick"
+              maxLength={2}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className={`w-full ${theme.colors.accent} text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all duration-200`}
+          >
+            Create Reward
+          </button>
+        </form>
+      </div>
+
+      {showEmojiPicker && (
+        <EmojiPicker
+          onSelect={(emoji) => setIcon(emoji)}
+          onClose={() => setShowEmojiPicker(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+
+    // -----------------------------
+    // Login screen (your flow)
+    // -----------------------------
+    function Login({ onLogin }) {
+      const [loginEmail, setLoginEmail] = useState('');
+      const [loginPin, setLoginPin] = useState('');
+      const [loginError, setLoginError] = useState('');
+
+      function handleLogin() {
+        const user = PARENT_USERS[loginEmail.toLowerCase().trim()];
+        if (!user) { setLoginError('Email not found'); return; }
+        if (user.pin !== loginPin) { setLoginError('Incorrect PIN'); return; }
+        setLoginError('');
+        onLogin(user);
+      }
+
+      function onKeyDown(e) { if (e.key === 'Enter') handleLogin(); }
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center p-4">
+          <div className="bg-white/90 rounded-3xl shadow-2xl p-8 w-full max-w-md border-2 border-white/40 backdrop-blur-lg">
+            <div className="text-center mb-8">
+              <div className="text-6xl mb-4">🎮</div>
+              <h1 className="text-4xl font-bold text-gray-800 mb-2" style={{ fontFamily: 'Fredoka One' }}>Chore Quest</h1>
+              <p className="text-gray-600" style={{ fontFamily: 'Nunito' }}>Parent Portal</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2" style={{ fontFamily: 'Nunito' }}>Parent Email</label>
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  onKeyDown={onKeyDown}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none"
+                  placeholder="your@email.com"
+                  style={{ fontFamily: 'Nunito' }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2" style={{ fontFamily: 'Nunito' }}>6-Digit PIN</label>
+                <input
+                  type="password"
+                  value={loginPin}
+                  onChange={(e) => setLoginPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                  onKeyDown={onKeyDown}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none text-2xl tracking-widest"
+                  placeholder="••••••"
+                  maxLength="6"
+                  style={{ fontFamily: 'Orbitron' }}
+                />
+              </div>
+
+              {loginError && (
+                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3 text-red-600 text-center" style={{ fontFamily: 'Nunito' }}>
+                  {loginError}
+                </div>
+              )}
+
+              <button
+                onClick={handleLogin}
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-4 rounded-xl hover:shadow-lg transition-all"
+                style={{ fontFamily: 'Nunito' }}
+              >
+                Enter Portal
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // -----------------------------
+    // Main App (template nav structure 1:1)
+    // -----------------------------
+    function ChoreQuestApp({ user, onLogout }) {
+    const stateKey = `${user.storageKey}_state_v2`;
+    const themeKey = `${user.storageKey}_theme_v2`;
+
+    const [state, dispatch] = useReducer(appReducer, initialAppState);
+    const [currentTheme, setCurrentTheme] = useState('space');
+    const [currentView, setCurrentView] = useState('dashboard');
+    const [questCategory, setQuestCategory] = useState('school');
+
+    const [showSettings, setShowSettings] = useState(false);
+    const [showAddQuest, setShowAddQuest] = useState(false);
+    const [showAddReward, setShowAddReward] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    const theme = THEMES[currentTheme] || THEMES.space;
+
+    // Load saved state + theme (per child)
+    useEffect(() => {
+    const savedTheme = localStorage.getItem(themeKey);
+    if (savedTheme && THEMES[savedTheme]) setCurrentTheme(savedTheme);
+
+    const saved = localStorage.getItem(stateKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+
+        const quests =
+          Array.isArray(parsed.quests) && parsed.quests.length ? parsed.quests : DEFAULT_QUESTS;
+        const rewards =
+          Array.isArray(parsed.rewards) && parsed.rewards.length ? parsed.rewards : DEFAULT_REWARDS;
+
+        const migrateQuestId = (id) => (id === 'chore-5' ? 'routine-5' : id);
+
+        const migrated = {
+          ...parsed,
+          quests: (quests || []).map((q) => (q.id === 'chore-5' ? { ...q, id: 'routine-5' } : q)),
+          completedQuests: (parsed.completedQuests || []).map((c) => ({
+            ...c,
+            questId: migrateQuestId(c.questId),
+          })),
+          transactionLog: (parsed.transactionLog || []).map((t) => ({
+            ...t,
+            questId: migrateQuestId(t.questId),
+          })),
+          activeQuest: parsed.activeQuest
+            ? { ...parsed.activeQuest, id: migrateQuestId(parsed.activeQuest.id) }
+            : null,
+        };
+
+        dispatch({
+          type: 'LOAD_STATE',
+          payload: { ...migrated, quests: migrated.quests, rewards },
+        });
+
+        return;
+      } catch (e) {}
+    }
+
+        // No saved state: seed defaults
+        if (user.childName === 'Claire') {
+          const seeded = {
+            ...initialAppState,
+            quests: DEFAULT_QUESTS,
+            rewards: DEFAULT_REWARDS,
+            completedQuests: CLAIRE_SEED_DATA.completedQuests || [],
+            redeemedRewards: CLAIRE_SEED_DATA.redeemedRewards || [],
+            badges: (CLAIRE_SEED_DATA.badges && Array.isArray(CLAIRE_SEED_DATA.badges))
+              ? CLAIRE_SEED_DATA.badges
+              : ['morning-hero','early-bird','math-master','organization-star','night-owl','reading-hero','bear-care-master','tidy-master','fresh-clean'],
+            badgeCounts: {
+              'math-master': 1,
+              'reading-hero': 2,
+              'tidy-master': 1,
+              'morning-hero': 5,
+              'organization-star': 1,
+              'night-owl': 5,
+              'fresh-clean': 5,
+              'bear-care-master': 2
+            },
+            currentStreak: 0,
+            longestStreak: 0,
+            lastCompletedDate: null,
+          };
+          seeded.totalStars = computeTotalStars(seeded.quests, seeded.completedQuests, seeded.redeemedRewards);
+          dispatch({ type: 'LOAD_STATE', payload: seeded });
+          if (CLAIRE_SEED_DATA.theme && THEMES[CLAIRE_SEED_DATA.theme]) setCurrentTheme(CLAIRE_SEED_DATA.theme);
+        } else {
+          const fresh = { ...initialAppState, quests: DEFAULT_QUESTS, rewards: DEFAULT_REWARDS };
+          fresh.totalStars  = computeTotalStars(fresh.quests,  fresh.completedQuests,  fresh.redeemedRewards);
+          dispatch({ type: 'LOAD_STATE', payload: fresh });
+        }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+
+      // Persist state (debounced)
+      useEffect(() => {
+        const timeoutId = setTimeout(() => {
+          try { localStorage.setItem(stateKey, JSON.stringify(state)); } catch (e) {}
+        }, 400);
+        return () => clearTimeout(timeoutId);
+      }, [state]);
+
+      useEffect(() => {
+        try { localStorage.setItem(themeKey, currentTheme); } catch (e) {}
+      }, [currentTheme]);
+
+      function verifyParentPin(actionLabel) {
+        const pin = prompt(`Parent PIN to ${actionLabel}`);
+          if (pin !== user.pin) {
+            alert('Incorrect PIN');
+            return false;
+          }
+        return true;
+      }
+
+      function handleDeleteQuest(id) {
+        const quest = state.quests.find(q => q.id === id);
+        if (!quest) return;
+
+        if (!verifyParentPin('delete quest')) return;
+
+        dispatch({ type: 'DELETE_QUEST', payload: id });
+        setTimeout(() => dispatch({ type: 'RECALC_TOTALS' }), 0);
+     }
+
+
+      function handleDeleteReward(id) {
+        const reward = state.rewards.find(r => r.id === id);
+        if (!reward) return;
+
+        if (reward.isDefault) {
+          const pin = prompt('Parent PIN to delete default reward:');
+          if (pin !== user.pin) return alert('Incorrect PIN');
+        }
+        dispatch({ type: 'DELETE_REWARD', payload: id });
+      }
+
+
+    // Derived display stats (ONE copy)
+  // -----------------------------
+  const baseline = state.statsBaseline || {
+  totalQuests: 0,
+  totalStars: 0,
+  currentStreak: 0,
+  bestStreak: 0,
+  categoryCounts: { school: 0, chore: 0, routine: 0 },
+  completedQuestsAtBaseline: 0,
+  redeemedRewardsAtBaseline: 0,
+  badgeCounts: {},
+};
+
+const baselineCompletedIndex = Number.isFinite(baseline.completedQuestsAtBaseline)
+  ? baseline.completedQuestsAtBaseline
+  : 0;
+
+const baselineRedeemedIndex = Number.isFinite(baseline.redeemedRewardsAtBaseline)
+  ? baseline.redeemedRewardsAtBaseline
+  : 0;
+
+// Quests count (your existing logic)
+const newCompletedCount = Math.max(0, state.completedQuests.length - baselineCompletedIndex);
+const displayTotalQuests = (baseline.totalQuests || 0) + newCompletedCount;
+
+// Streaks (your existing logic)
+const displayCurrentStreak = Math.max(state.currentStreak || 0, baseline.currentStreak || 0);
+const displayBestStreak = Math.max(state.longestStreak || 0, baseline.bestStreak || 0);
+
+// Stars (baseline-aware)
+const newCompleted = state.completedQuests.slice(baselineCompletedIndex);
+const newRedeemed = state.redeemedRewards.slice(baselineRedeemedIndex);
+
+const byId = new Map((state.quests || []).map(q => [q.id, q]));
+// const earnedAfterBaseline = newCompleted.reduce((sum, c) => {
+  // const q = byId.get(c.questId);
+ //  return sum + (q ? starsForQuest(q) : 0);
+// }, 0);
+
+// const spentAfterBaseline = newRedeemed.reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+
+const displayTotalStars = Number.isFinite(state.totalStars) ? state.totalStars : 0;
+
+
+// Badges (baseline-aware distinct count)
+const baseBadgeCounts = baseline.badgeCounts || {};
+const liveBadgeCounts = state.badgeCounts || {};
+const displayBadgeCounts = { ...baseBadgeCounts };
+for (const [id, count] of Object.entries(liveBadgeCounts)) {
+  const n = Number(count) || 0;
+  displayBadgeCounts[id] = (displayBadgeCounts[id] || 0) + n;
+}
+const displayDistinctBadges = Object.values(displayBadgeCounts).filter(c => (Number(c) || 0) > 0).length;
+
+
+  // return (...) uses displayTotalQuests, displayTotalStars, displayDistinctBadges,
+  // displayCurrentStreak, displayBestStreak
+
+
+      return (
+        <ThemeContext.Provider value={theme}>
+          <div className={`min-h-screen ${theme.colors.bg} transition-all duration-500`} style={{ fontFamily: theme.fontFamily }}>
+            {/* Header */}
+            <header className={`${theme.colors.card} backdrop-blur-lg shadow-2xl border-b-4 border-opacity-30`}>
+              <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${theme.colors.primary} flex items-center justify-center shadow-lg animate-pulse`}>
+                      <Icons.Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h1 className={`text-2xl sm:text-3xl font-bold ${theme.colors.text}`}>{user.childName}'s Chore Quest</h1>
+                      <p className={`text-xs sm:text-sm ${theme.colors.textLight}`}>{theme.name}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 sm:space-x-4">
+                    <div className={`hidden sm:flex items-center space-x-2 ${theme.colors.card} px-4 py-2 rounded-full shadow-lg border-2 border-opacity-20`}>
+                      <Icons.Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                      <span className={`text-xl font-bold ${theme.colors.text}`}>{state.totalStars}</span>
+                    </div>
+
+                    <button
+                      onClick={() => setShowSettings(true)}
+                      className={`p-2 sm:p-3 ${theme.colors.card} rounded-full shadow-lg hover:scale-110 transition-transform duration-200 border-2 border-opacity-20`}
+                      aria-label="Settings"
+                    >
+                      <Icons.Settings className={`w-5 h-5 ${theme.colors.text}`} />
+                    </button>
+
+                    <button
+                      onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                      className={`p-2 sm:p-3 ${theme.colors.card} rounded-full shadow-lg hover:scale-110 transition-transform duration-200 border-2 border-opacity-20 md:hidden`}
+                      aria-label="Menu"
+                    >
+                      <Icons.Menu className={`w-5 h-5 ${theme.colors.text}`} />
+                    </button>
+
+                    <button
+                      onClick={onLogout}
+                      className={`hidden md:inline-flex px-4 py-2 rounded-xl font-bold ${theme.colors.accent} text-white shadow-lg hover:shadow-xl transition-all`}
+                    >
+                      Logout
+                    </button>
+                  </div>
+                </div>
+
+                <div className={`sm:hidden flex items-center justify-center mt-4 ${theme.colors.card} px-4 py-2 rounded-full shadow-lg border-2 border-opacity-20`}>
+                  <Icons.Star className="w-5 h-5 text-yellow-500 fill-yellow-500 mr-2" />
+                  <span className={`text-xl font-bold ${theme.colors.text}`}>{displayTotalStars} Stars</span>
+                </div>
+              </div>
+
+              {isMobileMenuOpen && (
+                <div className={`md:hidden ${theme.colors.card} backdrop-blur-lg shadow-xl border-b-2 border-opacity-30 animate-slideDown`}>
+                  <nav className="px-4 py-2 space-y-1">
+                    {[
+                      { id: 'dashboard', label: 'Dashboard', icon: Icons.Home },
+                      { id: 'rewards', label: 'Rewards', icon: Icons.Gift },
+                      { id: 'achievements', label: 'Achievements', icon: Icons.Trophy },
+                    ].map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => { setCurrentView(item.id); setIsMobileMenuOpen(false); }}
+                        className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                          currentView === item.id ? `${theme.colors.accent} text-white shadow-lg scale-105` : `${theme.colors.textLight} hover:bg-white/30`
+                        }`}
+                      >
+                        <item.icon className="w-5 h-5" />
+                        <span className="font-semibold">{item.label}</span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => { setIsMobileMenuOpen(false); onLogout(); }}
+                      className={`w-full flex items-center justify-center px-4 py-3 rounded-xl transition-all duration-200 bg-white/30 ${theme.colors.text}`}
+                    >
+                      <span className="font-semibold">Logout</span>
+                    </button>
+                  </nav>
+                </div>
+              )}
+            </header>
+
+            {/* Main layout */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* Sidebar nav (desktop) */}
+                <aside className="hidden md:block w-64 space-y-4">
+                  <nav className={`${theme.colors.card} rounded-3xl p-4 shadow-2xl backdrop-blur-lg border-2 border-opacity-20`}>
+                    <h2 className={`text-lg font-bold ${theme.colors.text} mb-4 px-2`}>Navigation</h2>
+                    <div className="space-y-2">
+                      {[
+                        { id: 'dashboard', label: 'Dashboard', icon: Icons.Home },
+                        { id: 'rewards', label: 'Rewards Shop', icon: Icons.Gift },
+                        { id: 'achievements', label: 'Achievements', icon: Icons.Trophy },
+                      ].map(item => (
+                        <button
+                          key={item.id}
+                          onClick={() => setCurrentView(item.id)}
+                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                            currentView === item.id ? `${theme.colors.accent} text-white shadow-lg scale-105` : `${theme.colors.textLight} hover:bg-white/30`
+                          }`}
+                        >
+                          <item.icon className="w-5 h-5" />
+                          <span className="font-semibold">{item.label}</span>
+                        </button>
+                      ))}
+
+                      <button
+                        onClick={onLogout}
+                        className={`w-full px-4 py-3 rounded-xl font-bold ${theme.colors.accent} text-white shadow-lg hover:shadow-xl transition-all`}
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </nav>
+
+                  <div className={`${theme.colors.card} rounded-3xl p-6 shadow-2xl backdrop-blur-lg border-2 border-opacity-20`}>
+                    <h3 className={`text-lg font-bold ${theme.colors.text} mb-4 flex items-center`}>
+                      <Icons.Zap className="w-5 h-5 mr-2" />
+                      Quick Stats
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className={`${theme.colors.textLight}`}>Total Quests</span>
+                        <span className={`font-bold ${theme.colors.text}`}>{displayTotalQuests}</span>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                      <span className={theme.colors.textLight}>Stars</span>
+                      <span className={`font-bold ${theme.colors.text}`}>{displayTotalStars}</span>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                         <span className={`${theme.colors.textLight}`}>Badges</span>
+                         <span className={`font-bold ${theme.colors.text}`}>
+                         {displayDistinctBadges}
+
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <span className={`${theme.colors.textLight}`}>Current Streak</span>
+                        <span className={`font-bold ${theme.colors.text}`}>{displayCurrentStreak}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className={`${theme.colors.textLight}`}>Best Streak</span>
+                        <span className={`font-bold ${theme.colors.text}`}>{displayBestStreak}</span>
+                      </div>
+                    </div>
+                  </div>
+                </aside>
+
+                {/* Main content */}
+                <main className="flex-1">
+                  {state.activeQuest ? (
+                    <ActiveQuestView
+		                 quest={state.activeQuest}
+		                 onComplete={(q) => dispatch({ type: 'COMPLETE_QUEST', payload: q })}
+		                 onCancel={() => dispatch({ type: 'CANCEL_QUEST' })}
+		                 requestEarlyComplete={() => verifyParentPin('complete quest now')}
+		               />
+
+                  ) : currentView === 'dashboard' ? (
+                    <DashboardView
+                      quests={state.quests}
+                      questCategory={questCategory}
+                      setQuestCategory={setQuestCategory}
+                      onStartQuest={(quest) => dispatch({ type: 'START_QUEST', payload: quest })}
+                      onDeleteQuest={(id) => handleDeleteQuest(id)}
+                      onAddQuest={() => setShowAddQuest(true)}
+                    />
+                  ) : currentView === 'rewards' ? (
+                    <RewardsView
+                      rewards={state.rewards}
+                      totalStars={displayTotalStars}
+                      redeemedRewards={state.redeemedRewards}
+                      onRedeemReward={(reward) => dispatch({ type: 'REDEEM_REWARD', payload: reward })}
+                      onAddReward={() => setShowAddReward(true)}
+                      onDeleteReward={(id) => handleDeleteReward(id)}
+                    />
+                  ) : (
+                    <AchievementsView
+                      badges={state.badges}
+                      badgeCounts={state.badgeCounts}
+                      statsBaseline={state.statsBaseline}
+                      completedQuests={state.completedQuests}
+                      currentStreak={state.currentStreak}
+                      longestStreak={state.longestStreak}
+                      quests={state.quests}
+                    />
+
+                  )}
+                </main>
+              </div>
+            </div>
+
+            {/* Modals */}
+            {showSettings && (
+              <SettingsModal
+                onClose={() => setShowSettings(false)}
+                currentTheme={currentTheme}
+                setCurrentTheme={(t) => { setCurrentTheme(t); setShowSettings(false); }}
+              />
+            )}
+
+            {showAddQuest && (
+              <AddQuestModal
+                category={questCategory}
+                onClose={() => setShowAddQuest(false)}
+                onAdd={(quest) => dispatch({ type: 'ADD_QUEST', payload: quest })}
+              />
+            )}
+
+            {showAddReward && (
+              <AddRewardModal
+                onClose={() => setShowAddReward(false)}
+                onAdd={(reward) => dispatch({ type: 'ADD_REWARD', payload: reward })}
+              />
+            )}
+          </div>
+        </ThemeContext.Provider>
+      );
+    }
+
+    // -----------------------------
+    // Root App (login gate)
+    // -----------------------------
+    function App() {
+      const [currentUser, setCurrentUser] = useState(null);
+      if (!currentUser) return <Login onLogin={setCurrentUser} />;
+      return <ChoreQuestApp user={currentUser} onLogout={() => setCurrentUser(null)} />;
+    }
+
+    // React 18 mount (safe fallback)
+    const rootEl = document.getElementById('root');
+    if (ReactDOM.createRoot) {
+      ReactDOM.createRoot(rootEl).render(<App />);
+    } else {
+      ReactDOM.render(<App />, rootEl);
+    }
+  </script>
+</body>
+</html>
