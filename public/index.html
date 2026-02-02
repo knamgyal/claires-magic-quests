@@ -1595,8 +1595,8 @@ const ALL_EMOJIS = Object.values(EMOJI_LIBRARY).flat();
     // Main App (template nav structure 1:1)
     // -----------------------------
     function ChoreQuestApp({ user, onLogout }) {
-    const stateKey = `${user.storageKey}_state_v2`;
-    const themeKey = `${user.storageKey}_theme_v2`;
+    const stateKey = `${user.storageKey}_state_v3`;
+    const themeKey = `${user.storageKey}_theme_v3`;
 
     const [state, dispatch] = useReducer(appReducer, initialAppState);
     const [currentTheme, setCurrentTheme] = useState('space');
